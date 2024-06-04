@@ -1,4 +1,4 @@
-# relighting-ujm
+# Relighting Project of UJM
 
 ## 3 June 2024
 Note:
@@ -8,6 +8,7 @@ Note:
 - An approach that is lite
 - Working hours: 9am-5pm
 
+Reference:
 https://papercopilot.com/cat/cs/cg/inverse-rendering/image-relighting/
 
 Category:
@@ -17,10 +18,7 @@ Category:
 - Material Relighting
 - Portrait Relighting
 
-Compare base on availability, inference time
-
-Make the slide
-
+List of image based methods
 1. Learning to Reconstruct Shape and Spatially-Varying Reflectance from a Single Image
 2. Lighting up NeRF via Unsupervised Decomposition and Enhancement
 3. MaterialGAN: Reflectance Capture using a Generative SVBRDF Model
