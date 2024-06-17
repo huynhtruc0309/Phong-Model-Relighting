@@ -45,7 +45,7 @@ List of image based methods
 
 #### NeLF: Neural Light-transport Field for Portrait View Synthesis and Relighting
 
-![alt text](image-1.png)
+![alt text](images/image-1.png)
 
 ##### Summary
 - Introduce the neural light-transport field (NeLF) to infer the light-transport and volume density from a sparse set of input views. - - Enable joint relighting and view synthesis of real portraits from only five input images. 
@@ -66,7 +66,7 @@ SIPR, IBRNet
 
 #### Deep Reflectance Fields: High-Quality Facial Reflectance Field Inference From Color Gradient Illumination
 
-![alt text](image-3.png)
+![alt text](images/image-3.png)
 
 ##### Summary
 
@@ -89,7 +89,7 @@ Fyffe et al. 2009, Shu et al. 2017, Yamaguchi et al. 2018
 
 #### Face Relighting with Geometrically Consistent Shadows
 
-![alt text](image-4.png)
+![alt text](images/image-4.png)
 
 ##### Summary
 A novel face-relighting method that produces geometrically consistent shadows. By proposing a differentiable algorithm based on the principles of ray tracing that directly uses the face geometry for modeling hard shadows, our method produces physically correct hard shadows which the state-of-the-art face relighting method cannot produce.
@@ -112,7 +112,7 @@ SfSNet, DPR, SIPR, Nestmeyer
 
 #### Neural Light Transport for Relighting and View Synthesis
 
-![alt text](image-2.png)
+![alt text](images/image-2.png)
 
 ##### Summary
 Neural Light Transport (NLT) learns to interpolate the 6D light transport function of a surface as a function of the UV coordinate (2 DOFs), incident light direction (2 DOFs), and viewing direction (2 DOFs). The subject is imaged from multiple viewpoints when lit by different directional lights; a geometry proxy is also captured using active sensors. Querying the learned function at different light and/or viewing directions enables simultaneous relighting and view synthesis of this subject. The relit renderings that NLT produces can be combined according to HDRI maps to perform image-based relighting.
@@ -134,7 +134,7 @@ Diffuse Base, Barycentric Blending, Deep Shading, Xu et al., Relightables
 
 #### Deep Relightable Textures: Volumetric Performance Capture with Neural Rendering
 
-![alt text](image-5.png)
+![alt text](images/image-5.png)
 
 ##### Summary
 Photo-realistically synthesize and composite dynamic performers under any lighting condition from a desired camera viewpoint. Our framework presents a significant step towards bridging the gap between image-based rendering methods and volumetric videos, enabling exciting possibilities in mixed reality productions.
@@ -158,7 +158,7 @@ Guo et al. [2019] Thies et al. [2019] Martin-Brualla et al. [2018] Wenger et al.
 
 #### PS-NeRF: Neural Inverse Rendering for Multi-view Photometric Stereo
 
-![alt text](image-6.png)
+![alt text](images/image-6.png)
 
 ##### Summary
 Our method takes multi-view multi-light images as input, and is able to reconstruct accurate surface and faithful BRDFs based on our shadow-aware renderer. Specifically, we only take images under sparse views with each view illuminated by multiple unknown single directional lights.
@@ -179,7 +179,7 @@ NeRF, PhySG, NeRFactor, NeRF, NRF, UNISURF
 
 #### MII: Modeling Indirect Illumination for Inverse Rendering
 
-![alt text](image-7.png)
+![alt text](images/image-7.png)
 
 ##### Summary
 
@@ -196,7 +196,7 @@ NeRFactor, PhySG
 
 #### NeRFactor: Neural Factorization of Shape and Reflectance Under an Unknown Illumination
 
-![alt text](image-8.png)
+![alt text](images/image-8.png)
 
 ##### Summary
 The input to NeRFactor is assumed to be only multi-view images (and their camera poses) of an object lit by one unknown illumination condition. NeRFactor represents the shape and spatially-varying reflectance of an object as a set of 3D fields, each parameterized by Multi-Layer Perceptrons (MLPs) whose weights are optimized so as to “explain” the set of observed input images. After optimization, NeRFactor outputs, at each 3D location ? on the object’s surface, the surface normal ?, light visibility in any direction ?(?i), albedo ?, and reflectance ?BRDF that together explain the observed appearance?. By recovering the object’s geometry and reflectance, NeRFactor en- ables applications such as free-viewpoint relighting (with shadows) and material editing.
@@ -213,7 +213,7 @@ Inverse Rendering
 
 #### Learning to Reconstruct Shape and Spatially-Varying Reflectance from a Single Image
 
-![alt text](image-10.png)
+![alt text](images/image-10.png)
 
 ##### Summary
 The input to our method is a single image of an object (with a mask) captured under (dominant) flash and environment illumination. Reconstructing spatially-varying BRDF (SVBRDF) and shape, in such uncontrolled settings, is an extremely ill-posed problem. Inspired by the recent success of deep learning methods in computer vision and computer graphics, we handle this problem by training a CNN specifically designed with intuition from physics-based methods.
@@ -232,7 +232,7 @@ Shape and Material Estimation; Deep Learning for Inverse Rendering; Rendering La
 
 #### Shape, Light, and Material Decomposition from Images using Monte Carlo Rendering and Denoising
 
-![alt text](image-9.png)
+![alt text](images/image-9.png)
 
 ##### Summary
 We learn topology, materials, and environment map lighting jointly from 2D supervision. We directly optimize topology of a triangle mesh, learn materials through volumetric texturing, and leverage Monte Carlo rendering and denoising. Our output representation is a triangle mesh with spatially varying 2D textures and a high dynamic range environment map, which can be used unmodified in standard game engines. Knob model by Yasutoshi Mori, adapted by Morgan McGuire.
@@ -250,7 +250,7 @@ nvdiffrec, NeRFactor
 
 #### PhySG: Inverse Rendering with Spherical Gaussians for Physics-based Material Editing and Relighting
 
-![alt text](image-11.png)
+![alt text](images/image-11.png)
 
 ##### Summary
 We present PhySG, an end-to-end inverse rendering pipeline that includes a fully differentiable renderer and can reconstruct geometry, materials, and illumination from scratch from a set of RGB input images. Our framework represents specular BRDFs and environmental illumination using mixtures of spherical Gaussians, and represents geometry as a signed distance function parameterized as a Multi-Layer Perceptron. The use of spherical Gaussians allows us to efficiently solve for approximate light transport, and our method works on scenes with challenging non-Lambertian reflectance captured under natural, static illumination. We demonstrate, with both synthetic and real data, that our reconstructions not only enable rendering of novel viewpoints, but also physics-based appearance editing of materials and illumination.
@@ -269,7 +269,7 @@ NeRF, IDR, DVR
 
 #### Weakly-supervised Single-view Image Relighting
 
-![alt text](image-12.png)
+![alt text](images/image-12.png)
 
 ##### Summary
 At training time, Spec-Net separates input images into specular and diffuse branches. Spec-Net, Normal-Net and Light-Net are trained in a self-supervised manner by the Relit dataset. At inference time, inverse rendering properties are predicted to relight the object under novel lighting and material. The non-Lambertian render layers produce realistic relit images. 
@@ -298,7 +298,7 @@ Reflectance Capture; Generative Adversarial Networks
 
 #### Neural-PIL: Neural Pre-Integrated Lighting for Reflectance Decomposition
 
-![alt text](image-13.png)
+![alt text](images/image-13.png)
 
 ##### Summary
 Our neural-PIL based technique decomposes images observed under unknown illumination into high-quality BRDF, shape and illuminations. This allows us to then synthesize novel views (targets shown in insets) and perform relighting or illumination transfer.
@@ -330,7 +330,7 @@ Appearance Modeling; Joint Modeling of Shape and Appearance; Image-based Renderi
 
 #### NeRD: Neural Reflectance Decomposition from Image Collections
 
-![alt text](image-14.png)
+![alt text](images/image-14.png)
 
 ##### Summary
 This paper proposed a novel method to decompose image collections from multiple views taken under varying or fixed illumination conditions. By introducing physically-based lighting and appearance representations, this method can relight an object, and information can be extracted from the neural volume.
@@ -349,7 +349,7 @@ NeRF, NeRF-A
 
 #### NeRV: Neural Reflectance and Visibility Fields for Relighting and View Synthesis
 
-![alt text](image-15.png)
+![alt text](images/image-15.png)
 
 ##### Summary
 We optimize a Neural Reflectance and Visibility Field (NeRV) 3D representation from a set of input images of a scene illuminated by known but unconstrained lighting. Our NeRV representation can be rendered from novel views under arbitrary lighting conditions not seen during training.
@@ -393,7 +393,7 @@ Not available
 ### 5. Portrait relighting
 #### Deep Portrait Delighting
 
-![alt text](image-16.png)
+![alt text](images/image-16.png)
 
 ##### Summary
 Given a portrait image, we perform delighting: removing undesirable lighting characteristics and reconstructing the image under uniform lighting.
