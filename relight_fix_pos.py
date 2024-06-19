@@ -73,9 +73,9 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
     return new_rgb_image.astype(np.uint8)
 
 # Paths to your images
-rgb_image_path = 'inputs/rgb_image.png'
-depth_map_path = 'inputs/depth_map.png'
-normal_map_path = 'inputs/normal_map.png'
+rgb_image_path = 'sample_2/inputs/rgb_image.jpg'
+depth_map_path = 'sample_2/inputs/depth_map.jpg'
+normal_map_path = 'sample_2/inputs/normal_map.png'
 
 # Load images
 rgb_image = load_image(rgb_image_path)
@@ -89,10 +89,4 @@ light_color = [255, 255, 255]     # Example light color (white)
 for light_z in range(0, 260, 5):
     light_position = [963, 328, light_z]
     new_rgb_image = relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
-    cv2.imwrite(f'output_3/relighted_image_{light_z}.png', new_rgb_image)
-
-# # Relight the image
-# new_rgb_image = relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
-
-# # Save the new image
-# cv2.imwrite('outputs/relighted_image_m4.png', new_rgb_image)
+    cv2.imwrite(f'sample_2/output_2/relighted_image_{light_z}.png', new_rgb_image)
