@@ -21,19 +21,23 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
     height, width, _ = rgb_image.shape
     new_rgb_image = np.zeros_like(rgb_image)
 
+    # Convert sRGB to linear RGB
+    rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
+    light_color_linear = sRGB_to_linear(np.array(light_color) / 255.0)
+
     # Convert depth map to float
     depth_map = depth_map.astype(np.float32) 
 
     # Phong reflection model parameters
-    ambient_coefficient = 0.05
-    diffuse_coefficient = 0.3
+    ambient_coefficient = 0
+    diffuse_coefficient = 0.2
     specular_coefficient = 0
     shininess = 32
 
     # foreground_position = np.array((308, 148, depth_map[148, 308]))
     # foreground_position_2 = np.array((452, 131, depth_map[131, 452]))
     light_position = np.array(light_position)
-    light_color = np.array(light_color) / 255.0
+    # light_color = np.array(light_color) / 255.0
 
     for y in range(height):
         for x in range(width):
@@ -63,9 +67,9 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
 
             # Combine components
-            ambient = ambient_coefficient * light_color 
-            diffuse = diffuse_coefficient * diffuse_intensity * light_color
-            specular = specular_coefficient * specular_intensity * light_color
+            ambient = ambient_coefficient * light_color_linear 
+            diffuse = diffuse_coefficient * diffuse_intensity * light_color_linear
+            specular = specular_coefficient * specular_intensity * light_color_linear
 
             color = (ambient + diffuse + specular) 
             # color = np.clip(color, 0, 1)
@@ -110,9 +114,14 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             #     print("Color: ", color)
 
             # Apply the lighting to the original color
-            original_color = rgb_image[y, x] / 255.0
-            new_color = original_color + color
-            new_rgb_image[y, x] = np.clip(new_color * 255, 0, 255)
+            original_color_linear = rgb_image_linear[y, x]
+            new_color_linear = original_color_linear + color
+
+            # Convert back to sRGB for display purposes (if needed)
+            new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
+
+            # Update the image with relighted colors
+            new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
 
     # draw a circle on the selected position
     cv2.circle(new_rgb_image, (light_position[0], light_position[1]), 5, (255, 0, 0), -1)
@@ -121,8 +130,12 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
 
     return new_rgb_image.astype(np.uint8)
 
+def sRGB_to_linear(rgb):
+    linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+    return linear
+
 # Paths to your images
-sample = 3
+sample = 2
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -151,7 +164,7 @@ white_light = [255, 255, 255]  # Example light color (white)
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
 blue_light = [255, 0, 0] 
-light_z = 100                  # Fixed z-coordinate for the light  
+light_z = 220                  # Fixed z-coordinate for the light  
 
 # Initialize a global variable to store the selected position
 selected_position = None
