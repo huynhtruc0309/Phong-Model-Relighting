@@ -38,6 +38,32 @@ def bresenham_line(x0, y0, z0, x1, y1, z1, depth_map):
             y0 += sy
     return points  # Return the list of points
 
+def is_point_on_line_segment(p, p0, p1, tolerance=1e-9):
+    x, y, z = p
+    x0, y0, z0 = p0
+    x1, y1, z1 = p1
+    
+    # Check for degenerate line segment (P0 == P1)
+    if (x0 == x1) and (y0 == y1) and (z0 == z1):
+        return (x, y, z) == (x0, y0, z0)
+    
+    # Calculate t for each coordinate
+    try:
+        tx = (x - x0) / (x1 - x0) if x1 != x0 else None
+        ty = (y - y0) / (y1 - y0) if y1 != y0 else None
+        tz = (z - z0) / (z1 - z0) if z1 != z0 else None
+    except ZeroDivisionError:
+        return False
+    
+    # Check that t values are consistent
+    t_values = [t for t in (tx, ty, tz) if t is not None]
+    if len(t_values) > 1 and not all(abs(t - t_values[0]) < tolerance for t in t_values[1:]):
+        return False
+    
+    # Check that t is in the range [0, 1]
+    t = t_values[0] if t_values else None
+    return t is not None and 0 <= t <= 1
+
 def relight_image(rgb_image, depth_map, normal_map, light_position, light_color):
     print("Relighting the image...")
     height, width, _ = rgb_image.shape
@@ -73,9 +99,11 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
 
             # Check if the light can reach the pixel
             check_positions = bresenham_line(light_position[0], light_position[1], light_position[2], x, y, depth_map[y, x], depth_map)
+            save_check_position = None
             for check_position in check_positions:
                 # Check if the light can reach the pixel
-                if depth_map[check_position[1], check_position[0]] > light_position[2]:
+                if is_point_on_line_segment(check_position, light_position, position):
+                    save_check_position = check_position
                     depth_factor = 0
                     break
             
@@ -104,6 +132,8 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             if (x == light_position[0] and y == light_position[1]):
                 print("===At Blue spot===")
                 print("Depth factor: ", depth_factor)
+                if save_check_position:
+                    print("Save check position: ", save_check_position, depth_map[save_check_position[1], save_check_position[0]])
                 print("Light position: ", light_position)
                 print("Pixel position: ", position)
                 print("Light vector: ", light_vector)
@@ -114,31 +144,35 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
                 print("Diffuse: ", diffuse)
                 print("Color: ", color)
 
-            if (x == foreground_position[0] and y == foreground_position[1]):
-                print("===At Green spot===")
-                print("Depth factor: ", depth_factor)
-                print("Light position: ", light_position)
-                print("Pixel position: ", position)
-                print("Light vector: ", light_vector)
-                print("Normal vector: ", normal_vector)
-                print("Dot product ", np.dot(normal_vector, light_vector))    
-                print("Depth:", ((255 - depth_map[y, x]) / 255) ** 2)
-                print("Diffuse intensity: ", diffuse_intensity)
-                print("Diffuse: ", diffuse)
-                print("Color: ", color)
+            # if (x == foreground_position[0] and y == foreground_position[1]):
+            #     print("===At Green spot===")
+            #     print("Depth factor: ", depth_factor)
+            #     if save_check_position:
+            #         print("Save check position: ", save_check_position, depth_map[save_check_position[1], save_check_position[0]])
+            #     print("Light position: ", light_position)
+            #     print("Pixel position: ", position)
+            #     print("Light vector: ", light_vector)
+            #     print("Normal vector: ", normal_vector)
+            #     print("Dot product ", np.dot(normal_vector, light_vector))    
+            #     print("Depth:", ((255 - depth_map[y, x]) / 255) ** 2)
+            #     print("Diffuse intensity: ", diffuse_intensity)
+            #     print("Diffuse: ", diffuse)
+            #     print("Color: ", color)
 
-            if (x == foreground_position_2[0] and y == foreground_position_2[1]):
-                print("===At Red spot===")
-                print("Depth factor: ", depth_factor)
-                print("Light position: ", light_position)
-                print("Pixel position: ", position)
-                print("Light vector: ", light_vector)
-                print("Normal vector: ", normal_vector)
-                print("Dot product ", np.dot(normal_vector, light_vector))    
-                print("Depth:", ((255 - depth_map[y, x]) / 255) ** 2)
-                print("Diffuse intensity: ", diffuse_intensity)
-                print("Diffuse: ", diffuse)
-                print("Color: ", color)
+            # if (x == foreground_position_2[0] and y == foreground_position_2[1]):
+            #     print("===At Red spot===")
+            #     print("Depth factor: ", depth_factor)
+            #     if save_check_position:
+            #         print("Save check position: ", save_check_position, depth_map[save_check_position[1], save_check_position[0]])
+            #     print("Light position: ", light_position)
+            #     print("Pixel position: ", position)
+            #     print("Light vector: ", light_vector)
+            #     print("Normal vector: ", normal_vector)
+            #     print("Dot product ", np.dot(normal_vector, light_vector))    
+            #     print("Depth:", ((255 - depth_map[y, x]) / 255) ** 2)
+            #     print("Diffuse intensity: ", diffuse_intensity)
+            #     print("Diffuse: ", diffuse)
+            #     print("Color: ", color)
 
             # Apply the lighting to the original color
             original_color_linear = rgb_image_linear[y, x]
@@ -152,8 +186,8 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
 
     # draw a circle on the selected position
     cv2.circle(new_rgb_image, (light_position[0], light_position[1]), 5, (255, 0, 0), -1)
-    cv2.circle(new_rgb_image, (int(foreground_position[0]), int(foreground_position[1])), 5, (0, 255, 0), -1)
-    cv2.circle(new_rgb_image, (int(foreground_position_2[0]), int(foreground_position_2[1])), 5, (0, 0, 255), -1)
+    # cv2.circle(new_rgb_image, (int(foreground_position[0]), int(foreground_position[1])), 5, (0, 255, 0), -1)
+    # cv2.circle(new_rgb_image, (int(foreground_position_2[0]), int(foreground_position_2[1])), 5, (0, 0, 255), -1)
 
     print("Image relighted!")
     return new_rgb_image.astype(np.uint8)
@@ -163,7 +197,7 @@ def sRGB_to_linear(rgb):
     return linear
 
 # Paths to your images
-sample = 2
+sample = 3
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -189,10 +223,11 @@ if rgb_image is None or depth_map is None or normal_map is None:
 
 # Define new lighting parameters
 white_light = [255, 255, 255]  # Example light color (white)
+# the oder of the color is BGR
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
 blue_light = [255, 0, 0] 
-light_z = 100                  # Fixed z-coordinate for the light  
+light_z = 182                  # Fixed z-coordinate for the light  
 
 # Initialize a global variable to store the selected position
 selected_position = None
