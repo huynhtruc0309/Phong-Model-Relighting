@@ -82,8 +82,8 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
     specular_coefficient = 0
     shininess = 32
 
-    foreground_position = np.array((309, 151, depth_map[151, 309]))
-    foreground_position_2 = np.array((474, 67, depth_map[67, 474]))
+    # foreground_position = np.array((309, 151, depth_map[151, 309]))
+    # foreground_position_2 = np.array((474, 67, depth_map[67, 474]))
     light_position = np.array(light_position)
 
     for y in range(height):
@@ -98,14 +98,14 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             depth_factor = (1 - abs(light_vector[2]) / 255.0) ** 2
 
             # Check if the light can reach the pixel
-            check_positions = bresenham_line(light_position[0], light_position[1], light_position[2], x, y, depth_map[y, x], depth_map)
-            save_check_position = None
-            for check_position in check_positions:
-                # Check if the light can reach the pixel
-                if is_point_on_line_segment(check_position, light_position, position):
-                    save_check_position = check_position
-                    depth_factor = 0
-                    break
+            # check_positions = bresenham_line(light_position[0], light_position[1], light_position[2], x, y, depth_map[y, x], depth_map)
+
+            # for check_position in check_positions:
+            #     # Check if the light can reach the pixel
+            #     check_position = np.array([check_position[0], check_position[1], depth_map[check_position[1], check_position[0]]])
+            #     if is_point_on_line_segment(check_position, light_position, position):
+            #         depth_factor = 0
+            #         break
             
             # Normalize light vector
             light_vector = normalize(light_vector)
@@ -113,13 +113,13 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             # Calculate diffuse component
             normal_vector = normal_map[y, x]
             normal_vector = normalize(normal_vector)
-            diffuse_intensity = np.dot(normal_vector, abs(light_vector)) * depth_factor
+            diffuse_intensity = np.dot(normal_vector, abs(light_vector)) #* depth_factor
 
             # Calculate specular component
             view_vector = np.array([0, 0, 1])
             reflect_vector = 2 * normal_vector * np.dot(normal_vector, abs(light_vector)) - abs(light_vector)
             reflect_vector = normalize(reflect_vector)
-            specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
+            specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  #* depth_factor
 
             # Combine components
             ambient = ambient_coefficient * light_color_linear 
@@ -132,8 +132,6 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             if (x == light_position[0] and y == light_position[1]):
                 print("===At Blue spot===")
                 print("Depth factor: ", depth_factor)
-                if save_check_position:
-                    print("Save check position: ", save_check_position, depth_map[save_check_position[1], save_check_position[0]])
                 print("Light position: ", light_position)
                 print("Pixel position: ", position)
                 print("Light vector: ", light_vector)
@@ -197,7 +195,7 @@ def sRGB_to_linear(rgb):
     return linear
 
 # Paths to your images
-sample = 3
+sample = 2
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -227,7 +225,7 @@ white_light = [255, 255, 255]  # Example light color (white)
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
 blue_light = [255, 0, 0] 
-light_z = 182                  # Fixed z-coordinate for the light  
+light_z = 100                  # Fixed z-coordinate for the light  
 
 # Initialize a global variable to store the selected position
 selected_position = None
@@ -257,7 +255,7 @@ while True:
         x, y = selected_position
 
         # Update the image (you can add your processing logic here)
-        light_position = [x, y, light_z]
+        light_position = [x, y, int(depth_map[y, x])]
         print(f"Light position: {light_position}")
 
         # Relight with white light

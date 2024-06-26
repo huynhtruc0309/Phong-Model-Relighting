@@ -151,7 +151,7 @@ white_light = [255, 255, 255]  # Example light color (white)
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
 blue_light = [255, 0, 0] 
-light_z = 100                  # Fixed z-coordinate for the light  
+light_z = 194                  # Fixed z-coordinate for the light  
 
 # Initialize a global variable to store the selected position
 selected_position = None
