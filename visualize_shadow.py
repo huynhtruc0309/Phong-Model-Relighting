@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from numba import njit, objmode
 
 def load_image(file_path):
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
@@ -10,12 +11,15 @@ def load_depth_map(file_path):
 def load_normal_map(file_path):
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
+# @njit
 def normalize(v):
+    v = v.astype('float64')
     norm = np.linalg.norm(v)
     if norm == 0:
         return v
     return v / norm
 
+# @njit
 def draw_straight_line(x0, y0, z0, x1, y1, z1, depth_map):
     points = []  # List to hold the points on the line
     dx = abs(x1 - x0)  # Absolute difference in x
@@ -38,6 +42,7 @@ def draw_straight_line(x0, y0, z0, x1, y1, z1, depth_map):
             y0 += sy
     return points  # Return the list of points
 
+# @njit
 def check_point_on_line_segment(p, p0, p1, tolerance=1e-9):
     x, y, z = p
     x0, y0, z0 = p0
@@ -48,22 +53,28 @@ def check_point_on_line_segment(p, p0, p1, tolerance=1e-9):
         return (x, y, z) == (x0, y0, z0)
     
     # Calculate t for each coordinate
-    try:
-        tx = (x - x0) / (x1 - x0) if x1 != x0 else None
-        ty = (y - y0) / (y1 - y0) if y1 != y0 else None
-        tz = (z - z0) / (z1 - z0) if z1 != z0 else None
-    except ZeroDivisionError:
-        return False
+    tx = (x - x0) / (x1 - x0) if x1 != x0 else None
+    ty = (y - y0) / (y1 - y0) if y1 != y0 else None
+    tz = (z - z0) / (z1 - z0) if z1 != z0 else None
     
-    # Check that t values are consistent
+    # Check that t values are consistent 
     t_values = [t for t in (tx, ty, tz) if t is not None]
-    if len(t_values) > 1 and not all(abs(t - t_values[0]) < tolerance for t in t_values[1:]):
-        return False
+    if len(t_values) > 1:
+        first_t = t_values[0]
+        for t in t_values[1:]:
+            if abs(t - first_t) >= tolerance:
+                return False
     
     # Check that t is in the range [0, 1]
     t = t_values[0] if t_values else None
     return t is not None and 0 <= t <= 1
 
+# @njit
+def sRGB_to_linear(rgb):
+    linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+    return linear
+
+# @njit
 def relight_image(rgb_image, depth_map, normal_map, light_position, light_color):
     print("Relighting the image...")
     height, width, _ = rgb_image.shape
@@ -78,13 +89,11 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
 
     # Phong reflection model parameters
     ambient_coefficient = 0
-    diffuse_coefficient = 0.9
+    diffuse_coefficient = 0.3
     specular_coefficient = 0
     shininess = 32
 
-    foreground_position = np.array((449, 162, depth_map[162, 449]))
-    foreground_position_2 = np.array((389, 192, depth_map[192, 389]))
-    light_position = np.array(light_position)
+    shade_positions, stop_line_positions = [], []
 
     for y in range(height):
         for x in range(width):
@@ -92,7 +101,7 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             position = np.array([x, y, depth_map[y, x]])
 
             # Calculate vector from pixel to light
-            light_vector = light_position - position
+            light_vector = np.abs(light_position - position)
 
             # Calculate depth factor
             depth_factor = (1 - abs(light_vector[2]) / 255.0) ** 2
@@ -100,12 +109,17 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             # Check if the light can reach the pixel
             check_positions = draw_straight_line(light_position[0], light_position[1], light_position[2], x, y, depth_map[y, x], depth_map)
 
-            save_check_position = None
+
             for check_position in check_positions:
                 # Check if the light can reach the pixel
                 check_position = np.array([check_position[0], check_position[1], depth_map[check_position[1], check_position[0]]])
                 if check_point_on_line_segment(check_position, light_position, position):
-                    save_check_position = check_position
+                    if x == 115 and y == 291:
+                        print(y)
+                        print("DEBUG")
+
+                    shade_positions.append((x, y))
+                    stop_line_positions.append((check_position[0], check_position[1]))
                     depth_factor = 0
                     break
             
@@ -115,11 +129,11 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             # Calculate diffuse component
             normal_vector = normal_map[y, x]
             normal_vector = normalize(normal_vector)
-            diffuse_intensity = np.dot(normal_vector, abs(light_vector)) * depth_factor
+            diffuse_intensity = np.dot(normal_vector, light_vector) * depth_factor
 
             # Calculate specular component
-            view_vector = np.array([0, 0, 1])
-            reflect_vector = 2 * normal_vector * np.dot(normal_vector, abs(light_vector)) - abs(light_vector)
+            view_vector = np.array([0., 0., 1.])
+            reflect_vector = 2 * normal_vector * np.dot(normal_vector, light_vector) - light_vector
             reflect_vector = normalize(reflect_vector)
             specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
 
@@ -138,36 +152,6 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
                 print("Light vector: ", light_vector)
                 print("Normal vector: ", normal_vector)
                 print("Dot product ", np.dot(normal_vector, light_vector))
-                if save_check_position is not None:
-                    print("Save check position: ", save_check_position)
-                print("Depth factor: ", depth_factor)
-                print("Diffuse intensity: ", diffuse_intensity)
-                print("Diffuse: ", diffuse)
-                print("Color: ", color)
-
-            if (x == foreground_position[0] and y == foreground_position[1]):
-                print("===At Green spot===")
-                print("Light position: ", light_position)
-                print("Pixel position: ", position)
-                print("Light vector: ", light_vector)
-                print("Normal vector: ", normal_vector)
-                print("Dot product ", np.dot(normal_vector, light_vector))
-                if save_check_position is not None:
-                    print("Save check position: ", save_check_position)
-                print("Depth factor: ", depth_factor)
-                print("Diffuse intensity: ", diffuse_intensity)
-                print("Diffuse: ", diffuse)
-                print("Color: ", color)
-
-            if (x == foreground_position_2[0] and y == foreground_position_2[1]):
-                print("===At Red spot===")
-                print("Light position: ", light_position)
-                print("Pixel position: ", position)
-                print("Light vector: ", light_vector)
-                print("Normal vector: ", normal_vector)
-                print("Dot product ", np.dot(normal_vector, light_vector))
-                if save_check_position is not None:
-                    print("Save check position: ", save_check_position)
                 print("Depth factor: ", depth_factor)
                 print("Diffuse intensity: ", diffuse_intensity)
                 print("Diffuse: ", diffuse)
@@ -183,20 +167,12 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             # Update the image with relighted colors
             new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
 
-    # draw a circle on the selected position
-    cv2.circle(new_rgb_image, (light_position[0], light_position[1]), 5, (255, 0, 0), -1)
-    cv2.circle(new_rgb_image, (int(foreground_position[0]), int(foreground_position[1])), 5, (0, 255, 0), -1)
-    cv2.circle(new_rgb_image, (int(foreground_position_2[0]), int(foreground_position_2[1])), 5, (0, 0, 255), -1)
-
     print("Image relighted!")
-    return new_rgb_image.astype(np.uint8)
+    return new_rgb_image.astype(np.uint8), shade_positions, stop_line_positions
 
-def sRGB_to_linear(rgb):
-    linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
-    return linear
 
 # Paths to your images
-sample = 1
+sample = 5
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -226,7 +202,7 @@ white_light = [255, 255, 255]  # Example light color (white)
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
 blue_light = [255, 0, 0] 
-light_z = 398                  # Fixed z-coordinate for the light  
+light_z = 25                  # Fixed z-coordinate for the light  
 
 # Initialize a global variable to store the selected position
 selected_position = None
@@ -253,16 +229,38 @@ while True:
     # Check if a position has been selected
     if selected_position:
         # Process the selected position (example: draw a circle on the selected position)
-        x, y = selected_position
+        # x, y = selected_position
+        x, y = 30, 186
 
         # Update the image (you can add your processing logic here)
-        light_position = [509, 132, light_z]
+        # light_position = [x, y, light_z]
+        light_position = np.array([x, y, depth_map[y, x] + 10])
+        # light_position = [509, 132, light_z]
         print(f"Light position: {light_position}")
 
         # Relight with white light
-        new_rgb_image = relight_image(rgb_image, depth_map, normal_map, light_position, white_light)
+        new_rgb_image, shade_positions, stop_line_positions = relight_image(rgb_image, depth_map, normal_map, light_position, white_light)
+
         cv2.imshow('Image', new_rgb_image)
-        
+
+        # draw a circle on the selected position
+        cv2.circle(new_rgb_image, (light_position[0], light_position[1]), 5, (255, 0, 0), -1)
+        for i in range(len(shade_positions)):
+            cv2.line(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), (0, 0, 0), 1)
+            cv2.circle(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), 1, (0, 0, 255), -1)
+            cv2.circle(new_rgb_image, (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), 1, (0, 255, 0), -1)
+
+            cv2.imshow('Not lighted points', new_rgb_image)
+            
+            print("Stop point:", stop_line_positions[i], depth_map[int(stop_line_positions[i][1]), int(stop_line_positions[i][0])])
+            print("Shade point:", shade_positions[i], depth_map[shade_positions[i][1], shade_positions[i][0]])
+
+            key = cv2.waitKey(0) # Wait indefinitely for a key press
+            if key == 13 or key == 10: # ASCII code for Enter key (13 on some systems, 10 on others)
+                continue # Proceed to the next iteration of the loop
+            else:
+                break # Exit the loop if any other key is pressed
+
         # Reset the selected position
         selected_position = None
 

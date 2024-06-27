@@ -5,16 +5,16 @@ def load_image(file_path):
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
 def load_depth_map(file_path):
-    return np.load(file_path)
+    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 def load_normal_map(file_path):
-    return np.load(file_path)
+    return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
 # Paths to your images
-sample = 1
+sample = 5
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
-depth_map_path = 'sample_' + str(sample) + '/inputs/depth.npy'
-normal_map_path = 'sample_' + str(sample) + '/inputs/normal.npy'
+depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
+normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
 
 # Load images
 rgb_image = load_image(rgb_image_path)
