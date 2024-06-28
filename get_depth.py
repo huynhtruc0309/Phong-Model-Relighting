@@ -10,19 +10,24 @@ def load_depth_map(file_path):
 def load_normal_map(file_path):
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
+def load_mask(file_path):
+    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
 # Paths to your images
 sample = 5
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
+mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 # Load images
 rgb_image = load_image(rgb_image_path)
 depth_map = load_depth_map(depth_map_path)
 normal_map = load_normal_map(normal_map_path)
+mask = load_mask(mask_path)
 
 # resize the images keep the aspect ratio
-scale_percent = 50
+scale_percent = 100
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)
@@ -49,6 +54,8 @@ cv2.namedWindow('Get depth and normal maps')
 cv2.setMouseCallback('Get depth and normal maps', mouse_callback)
 cv2.imshow('Get depth and normal maps', rgb_image)
 
+print(97, 240, depth_map[240, 97], normal_map[240, 97], mask[240, 97])
+
 while True:
     # Wait for a key event for 1 ms
     key = cv2.waitKey(1) & 0xFF
@@ -63,7 +70,7 @@ while True:
         x, y = selected_position
 
 
-        print(x, y, depth_map[y, x], normal_map[y, x])
+        print(x, y, depth_map[y, x], normal_map[y, x], mask[y, x])
 
         # Reset the selected position
         selected_position = None

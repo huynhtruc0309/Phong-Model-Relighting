@@ -1,17 +1,33 @@
 import cv2
 import numpy as np
-from numba import njit, objmode
+import os
+from numba import njit
 
 def load_image(file_path):
+    if not os.path.isfile(file_path):
+        print(f"Image '{file_path}' does not exist.")
+        return None
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
 def load_depth_map(file_path):
+    if not os.path.isfile(file_path):
+        print(f"Depth map '{file_path}' does not exist.")
+        return None
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 def load_normal_map(file_path):
+    if not os.path.isfile(file_path):
+        print(f"Normal map '{file_path}' does not exist.")
+        return None
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
-# @njit
+def load_mask(file_path):
+    if not os.path.isfile(file_path):
+        print(f"Mask '{file_path}' does not exist.")
+        return None
+    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+
+@njit
 def normalize(v):
     v = v.astype('float64')
     norm = np.linalg.norm(v)
@@ -19,9 +35,12 @@ def normalize(v):
         return v
     return v / norm
 
-# @njit
-def draw_straight_line(x0, y0, z0, x1, y1, z1, depth_map):
+@njit
+def draw_straight_line(p0, p1):
+    x0, y0, _ = p0
+    x1, y1, _ = p1
     points = []  # List to hold the points on the line
+
     dx = abs(x1 - x0)  # Absolute difference in x
     dy = abs(y1 - y0)  # Absolute difference in y
     sx = 1 if x0 < x1 else -1  # Step direction for x
@@ -29,10 +48,6 @@ def draw_straight_line(x0, y0, z0, x1, y1, z1, depth_map):
     err = dx - dy  # Error term
 
     while True:
-        if depth_map[y0, x0] > min(z0, z1) and depth_map[y0, x0] < max(z0, z1):
-            points.append((x0, y0))  # Add the current point to the list
-        if x0 == x1 and y0 == y1:  # Check if the end point is reached
-            break
         e2 = 2 * err  # Double the error term
         if e2 > -dy:  # Adjust error term and x coordinate
             err -= dy
@@ -40,42 +55,37 @@ def draw_straight_line(x0, y0, z0, x1, y1, z1, depth_map):
         if e2 < dx:  # Adjust error term and y coordinate
             err += dx
             y0 += sy
+        if x0 == x1 and y0 == y1:  # Check if the end point is reached
+            break
+        points.append((x0, y0))  # Add the current point to the list
+        
     return points  # Return the list of points
 
-# @njit
+@njit
 def check_point_on_line_segment(p, p0, p1, tolerance=1e-9):
-    x, y, z = p
-    x0, y0, z0 = p0
-    x1, y1, z1 = p1
+    # Calculate vectors
+    line_vec = p1 - p0
+    point_vec = p - p0
     
-    # Check for degenerate line segment (P0 == P1)
-    if (x0 == x1) and (y0 == y1) and (z0 == z1):
-        return (x, y, z) == (x0, y0, z0)
+    # Calculate dot product
+    dot_product = np.dot(line_vec, point_vec)
     
-    # Calculate t for each coordinate
-    tx = (x - x0) / (x1 - x0) if x1 != x0 else None
-    ty = (y - y0) / (y1 - y0) if y1 != y0 else None
-    tz = (z - z0) / (z1 - z0) if z1 != z0 else None
+    # Calculate squared lengths
+    line_len_sq = np.dot(line_vec, line_vec)
+    point_len_sq = np.dot(point_vec, point_vec)
     
-    # Check that t values are consistent 
-    t_values = [t for t in (tx, ty, tz) if t is not None]
-    if len(t_values) > 1:
-        first_t = t_values[0]
-        for t in t_values[1:]:
-            if abs(t - first_t) >= tolerance:
-                return False
-    
-    # Check that t is in the range [0, 1]
-    t = t_values[0] if t_values else None
-    return t is not None and 0 <= t <= 1
+    # Check if the point lies on the infinite line
+    if dot_product**2 != point_len_sq * line_len_sq:
+        return False    
+    return True
 
-# @njit
+@njit
 def sRGB_to_linear(rgb):
     linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
     return linear
 
-# @njit
-def relight_image(rgb_image, depth_map, normal_map, light_position, light_color):
+@njit
+def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_color):
     print("Relighting the image...")
     height, width, _ = rgb_image.shape
     new_rgb_image = np.zeros_like(rgb_image)
@@ -107,17 +117,11 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             depth_factor = (1 - abs(light_vector[2]) / 255.0) ** 2
 
             # Check if the light can reach the pixel
-            check_positions = draw_straight_line(light_position[0], light_position[1], light_position[2], x, y, depth_map[y, x], depth_map)
-
-
+            check_positions = draw_straight_line(light_position, position)
+            
             for check_position in check_positions:
-                # Check if the light can reach the pixel
                 check_position = np.array([check_position[0], check_position[1], depth_map[check_position[1], check_position[0]]])
-                if check_point_on_line_segment(check_position, light_position, position):
-                    if x == 115 and y == 291:
-                        print(y)
-                        print("DEBUG")
-
+                if check_point_on_line_segment(check_position, light_position, position): #and mask[int(check_position[1]), int(check_position[0])] == 255:
                     shade_positions.append((x, y))
                     stop_line_positions.append((check_position[0], check_position[1]))
                     depth_factor = 0
@@ -143,7 +147,6 @@ def relight_image(rgb_image, depth_map, normal_map, light_position, light_color)
             specular = specular_coefficient * specular_intensity * light_color_linear
 
             color = (ambient + diffuse + specular) 
-            # color = np.clip(color, 0, 1)
 
             if (x == light_position[0] and y == light_position[1]):
                 print("===At Blue spot===")
@@ -176,25 +179,22 @@ sample = 5
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
+mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 # Load images
 rgb_image = load_image(rgb_image_path)
 depth_map = load_depth_map(depth_map_path)
 normal_map = load_normal_map(normal_map_path)
+mask = load_depth_map(mask_path)
 
 # resize the images keep the aspect ratio
-scale_percent = 50
+scale_percent = 70
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)
 rgb_image = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
 depth_map = cv2.resize(depth_map, dim, interpolation = cv2.INTER_AREA)
 normal_map = cv2.resize(normal_map, dim, interpolation = cv2.INTER_AREA)
-
-# Check if images are loaded correctly
-if rgb_image is None or depth_map is None or normal_map is None:
-    print("One or more images could not be loaded. Exiting program.")
-    exit()
 
 # Define new lighting parameters
 white_light = [255, 255, 255]  # Example light color (white)
@@ -229,17 +229,14 @@ while True:
     # Check if a position has been selected
     if selected_position:
         # Process the selected position (example: draw a circle on the selected position)
-        # x, y = selected_position
-        x, y = 30, 186
+        x, y = selected_position
+        # x, y = 30, 186
 
         # Update the image (you can add your processing logic here)
-        # light_position = [x, y, light_z]
-        light_position = np.array([x, y, depth_map[y, x] + 10])
-        # light_position = [509, 132, light_z]
-        print(f"Light position: {light_position}")
+        light_position = np.array([10, y, depth_map[y, x]])
 
         # Relight with white light
-        new_rgb_image, shade_positions, stop_line_positions = relight_image(rgb_image, depth_map, normal_map, light_position, white_light)
+        new_rgb_image, shade_positions, stop_line_positions = relight_image(rgb_image, depth_map, normal_map, mask, light_position, white_light)
 
         cv2.imshow('Image', new_rgb_image)
 
@@ -254,6 +251,7 @@ while True:
             
             print("Stop point:", stop_line_positions[i], depth_map[int(stop_line_positions[i][1]), int(stop_line_positions[i][0])])
             print("Shade point:", shade_positions[i], depth_map[shade_positions[i][1], shade_positions[i][0]])
+            print("Mask value: ", mask[int(stop_line_positions[i][1]), int(stop_line_positions[i][0])])
 
             key = cv2.waitKey(0) # Wait indefinitely for a key press
             if key == 13 or key == 10: # ASCII code for Enter key (13 on some systems, 10 on others)
