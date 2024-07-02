@@ -14,7 +14,7 @@ def load_mask(file_path):
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 # Paths to your images
-sample = 5
+sample = 6
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -54,8 +54,6 @@ cv2.namedWindow('Get depth and normal maps')
 cv2.setMouseCallback('Get depth and normal maps', mouse_callback)
 cv2.imshow('Get depth and normal maps', rgb_image)
 
-print(97, 240, depth_map[240, 97], normal_map[240, 97], mask[240, 97])
-
 while True:
     # Wait for a key event for 1 ms
     key = cv2.waitKey(1) & 0xFF
@@ -70,7 +68,7 @@ while True:
         x, y = selected_position
 
 
-        print(x, y, depth_map[y, x], normal_map[y, x], mask[y, x])
+        print(x, y, depth_map[y, x], normal_map[y, x])
 
         # Reset the selected position
         selected_position = None

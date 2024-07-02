@@ -1,19 +1,32 @@
-import cv2
+def find_z_on_ray(p1, p2, x, y):
+    """
+    Given two points p1 and p2 defining a ray in 3D, and x, y coordinates,
+    find the z coordinate of a point lying on the ray.
 
-image = cv2.imread('sample_5/inputs/rgb_image.png')
-mask = cv2.imread('sample_5/inputs/mask.png')
+    Parameters:
+    - p1: Tuple[float, float, float], the first point (x1, y1, z1) on the ray.
+    - p2: Tuple[float, float, float], the second point (x2, y2, z2) on the ray.
+    - x: float, the x coordinate of the point whose z coordinate is to be found.
+    - y: float, the y coordinate of the point whose z coordinate is to be found.
 
-# resize the images keep the aspect ratio
-scale_percent = 70
-width = int(image.shape[1] * scale_percent / 100)
-height = int(image.shape[0] * scale_percent / 100)
-dim = (width, height)
-image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-mask = cv2.resize(mask, dim, interpolation = cv2.INTER_AREA)
+    Returns:
+    - float, the z coordinate of the point on the ray.
+    """
+    x1, y1, z1 = p1
+    x2, y2, z2 = p2
 
-cv2.circle(image, (86, 260), 1, (0, 0, 255), -1)
-cv2.circle(mask, (86, 260), 1, (0, 0, 255), -1)
-cv2.imshow('image', image)
-cv2.imshow('mask', mask)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    # Avoid division by zero if x2 == x1 or y2 == y1
+    if x2 != x1:
+        t = (x - x1) / (x2 - x1)
+    elif y2 != y1:
+        t = (y - y1) / (y2 - y1)
+    else:
+        # The ray is a point or invalid input; cannot determine z uniquely
+        raise ValueError("The input points do not define a valid ray.")
+
+    # Calculate the z coordinate using the parameter t
+    z = z1 + t * (z2 - z1)
+
+    return z
+
+print(find_z_on_ray((251, 547, 260), (250, 382, 96), 250, 384))
