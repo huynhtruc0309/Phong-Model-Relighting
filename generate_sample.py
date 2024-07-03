@@ -7,7 +7,7 @@ height, width = 200, 300
 
 # Create a blue background image
 color_image = np.zeros((height, width, 3), dtype=np.uint8)
-color_image[:, :] = [227, 219, 171]  # Blue background (BGR format)
+color_image[:, :] = [112, 57, 6]  # Blue background (BGR format)
 
 # Draw a red rectangle in the center
 rect_start = (width // 4, height // 4)

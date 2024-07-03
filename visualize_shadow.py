@@ -27,7 +27,7 @@ def load_mask(file_path):
         return None
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
-# @njit
+@njit
 def normalize(v):
     v = v.astype('float64')
     norm = np.linalg.norm(v)
@@ -35,7 +35,7 @@ def normalize(v):
         return v
     return v / norm
 
-# @njit
+@njit
 def draw_straight_line(p0, p1):
     x0, y0, _ = p0
     x1, y1, _ = p1
@@ -61,13 +61,13 @@ def draw_straight_line(p0, p1):
         
     return points  # Return the list of points
 
-# @njit
+@njit
 def sRGB_to_linear(rgb):
     linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
     return linear
 
-# @njit
-def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_color, tolerance = 10):
+@njit
+def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_color, tolerance = 1):
     print("Relighting the image...")
     height, width, _ = rgb_image.shape
     new_rgb_image = np.zeros_like(rgb_image)
@@ -86,7 +86,11 @@ def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_
     specular_coefficient = 0
     shininess = 32
 
-    shade_positions, stop_line_positions, debug_positions = [], [], []
+    shade_positions, stop_line_positions, depth_positions = [], [], []
+
+
+    rect_start = (width // 4, height // 4)
+    rect_end = (3 * width // 4, 3 * height // 4)
 
     for y in range(height):
         for x in range(width):
@@ -102,21 +106,19 @@ def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_
             # Check if the light can reach the pixel
             check_positions = draw_straight_line(light_position, position)
             
-            if light_position[0] == 41 and light_position[1] == 193: 
-                print("DEBUG")
             if len(check_positions):
                 depth_step = (light_position[2] - position[2]) / len(check_positions)
                 check_position_depth = light_position[2]
 
                 for check_position in check_positions:
                     check_position_depth -= depth_step
-                    if light_position[0] == 41 and light_position[1] == 193: 
-                        debug_positions.append((check_position[0], check_position[1], depth_map[int(check_position[1]), int(check_position[0])], check_position_depth))
+
                     if abs(depth_map[int(check_position[1]), int(check_position[0])] - check_position_depth) < tolerance \
                         and mask[int(check_position[1]), int(check_position[0])] \
-                        and abs(check_position[0] - position[0]) > 1 and abs(check_position[1] - position[1]) > 1:                            
+                        and abs(check_position[0] - position[0]) > 2 and abs(check_position[1] - position[1]) > 2:  
                             shade_positions.append((x, y))
                             stop_line_positions.append((check_position[0], check_position[1]))
+                            depth_positions.append(check_position_depth)
                             shadow_map[y, x] = 0
                             depth_factor = 0
                             break
@@ -165,11 +167,11 @@ def relight_image(rgb_image, depth_map, normal_map, mask, light_position, light_
             new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
 
     print("Image relighted!")
-    return new_rgb_image.astype(np.uint8), shade_positions, stop_line_positions, shadow_map, debug_positions
+    return new_rgb_image.astype(np.uint8), shade_positions, stop_line_positions, shadow_map, depth_positions
 
 
 # Paths to your images
-sample = 5
+sample = 6
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
@@ -182,7 +184,7 @@ normal_map = load_normal_map(normal_map_path)
 mask = load_depth_map(mask_path)
 
 # resize the images keep the aspect ratio
-scale_percent = 50
+scale_percent = 100
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)
@@ -211,7 +213,6 @@ def mouse_callback(event, x, y, flags, param):
 cv2.namedWindow('Image')
 cv2.setMouseCallback('Image', mouse_callback)
 cv2.imshow('Image', rgb_image)
-cv2.imshow('Debug image', rgb_image)
 
 while True:
     # Wait for a key event for 1 ms
@@ -225,14 +226,14 @@ while True:
     if selected_position:
         # Process the selected position (example: draw a circle on the selected position)
         # x, y = selected_position
-        x, y = 41, 193
+        x, y = 217, 141
 
         # Update the image (you can add your processing logic here)
-        light_position = np.array([x, y, 260]).astype(np.float64)
+        light_position = np.array([x, y, 300]).astype(np.float64)
         
         show_rgb_image = rgb_image.copy()
         # Relight with white light
-        new_rgb_image, shade_positions, stop_line_positions, shadow_map, debug_positions = relight_image(rgb_image, depth_map, normal_map, mask, light_position, white_light)
+        new_rgb_image, shade_positions, stop_line_positions, shadow_map, depth_positions = relight_image(rgb_image, depth_map, normal_map, mask, light_position, white_light)
 
         # draw a circle on the selected position
         cv2.circle(new_rgb_image, (int(light_position[0]), int(light_position[1])), 5, (255, 0, 0), -1)
@@ -240,27 +241,24 @@ while True:
         cv2.imshow('Image', new_rgb_image)
         cv2.imshow('Shadow map', shadow_map * 255)
 
-        print(debug_positions)
         stop_flag = True
-        # for debug_position in debug_positions:
-        #     # cv2.line(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), (0, 0, 0), 1)
-        #     # cv2.circle(new_rgb_image, (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), 1, (0, 255, 0), -1)
-        #     # cv2.circle(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), 1, (0, 0, 255), -1)
-        #     cv2.circle(new_rgb_image, (int(debug_position[0]), int(debug_position[1])), 1, (0, 0, 255), -1)
-        #     print("Depth", debug_position[2])
-        #     print("Ray depth", debug_position[3])
+        for i in range(len(shade_positions)):
+            cv2.line(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), (0, 0, 0), 1)
+            cv2.circle(new_rgb_image, (int(stop_line_positions[i][0]), int(stop_line_positions[i][1])), 1, (0, 255, 0), -1)
+            cv2.circle(new_rgb_image, (int(shade_positions[i][0]), int(shade_positions[i][1])), 1, (0, 0, 255), -1)
 
-        #     cv2.imshow('Not lighted points', new_rgb_image)
+            cv2.imshow('Not lighted points', new_rgb_image)
             
-        #     # print("Stop point:", stop_line_positions[i], depth_map[int(stop_line_positions[i][1]), int(stop_line_positions[i][0])])
-        #     # print("Shade point:", shade_positions[i], depth_map[shade_positions[i][1], shade_positions[i][0]])
+            print("Stop point:", stop_line_positions[i], depth_map[int(stop_line_positions[i][1]), int(stop_line_positions[i][0])])
+            print("Shade point:", shade_positions[i], depth_map[shade_positions[i][1], shade_positions[i][0]])
+            print("Depth position:", depth_positions[i])
 
-        #     if stop_flag:
-        #         key = cv2.waitKey(0) # Wait indefinitely for a key press
-        #         if key == 13 or key == 10: # ASCII code for Enter key (13 on some systems, 10 on others)
-        #             continue # Proceed to the next iteration of the loop
-        #         else:
-        #             stop_flag = False
+            if stop_flag:
+                key = cv2.waitKey(0) # Wait indefinitely for a key press
+                if key == 13 or key == 10: # ASCII code for Enter key (13 on some systems, 10 on others)
+                    continue # Proceed to the next iteration of the loop
+                else:
+                    stop_flag = False
 
         # Reset the selected position
         selected_position = None
