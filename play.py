@@ -1,32 +1,30 @@
-def find_z_on_ray(p1, p2, x, y):
-    """
-    Given two points p1 and p2 defining a ray in 3D, and x, y coordinates,
-    find the z coordinate of a point lying on the ray.
+import cv2
+import numpy as np
 
-    Parameters:
-    - p1: Tuple[float, float, float], the first point (x1, y1, z1) on the ray.
-    - p2: Tuple[float, float, float], the second point (x2, y2, z2) on the ray.
-    - x: float, the x coordinate of the point whose z coordinate is to be found.
-    - y: float, the y coordinate of the point whose z coordinate is to be found.
+# Load the binary image
+binary_image_path = 'Shadow map_screenshot_05.07.2024.png'
+binary_image = cv2.imread(binary_image_path, cv2.IMREAD_GRAYSCALE)
+rgb_image = cv2.imread('sample_5/inputs/rgb_image.png', cv2.IMREAD_COLOR)
 
-    Returns:
-    - float, the z coordinate of the point on the ray.
-    """
-    x1, y1, z1 = p1
-    x2, y2, z2 = p2
+# Ensure the image is binary (if not already)
+_, binary_image = cv2.threshold(binary_image, 128, 255, cv2.THRESH_BINARY)
 
-    # Avoid division by zero if x2 == x1 or y2 == y1
-    if x2 != x1:
-        t = (x - x1) / (x2 - x1)
-    elif y2 != y1:
-        t = (y - y1) / (y2 - y1)
-    else:
-        # The ray is a point or invalid input; cannot determine z uniquely
-        raise ValueError("The input points do not define a valid ray.")
+# Apply morphological operations
+kernel = np.ones((7, 7), np.uint8)  # You can adjust the kernel size
+closed_image = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, kernel)
 
-    # Calculate the z coordinate using the parameter t
-    z = z1 + t * (z2 - z1)
+# Apply Gaussian blur to smooth the edges
+smoothed_image = cv2.GaussianBlur(closed_image, (7, 7), 0)  # Adjust the kernel size as needed
 
-    return z
+# Threshold again to keep it binary
+_, smoothed_binary_image = cv2.threshold(smoothed_image, 128, 255, cv2.THRESH_BINARY)
 
-print(find_z_on_ray((251, 547, 260), (250, 382, 96), 250, 384))
+rgb_image *= smoothed_binary_image[:, :, None]
+
+# Save or display the result
+cv2.imwrite('Smoothed_Shadow_Map.png', smoothed_binary_image)
+cv2.imshow('Original RGB Image', rgb_image)
+cv2.imshow('Original Binary Image', binary_image)
+cv2.imshow('Smoothed Binary Image', smoothed_binary_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
