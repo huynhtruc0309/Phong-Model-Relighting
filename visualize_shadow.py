@@ -29,7 +29,7 @@ def load_mask(file_path):
     _, binary_mask = cv2.threshold(binary_mask, 128, 255, cv2.THRESH_BINARY)
     return binary_mask
 
-def refine_visibility_map(visibility_map, mask, kernel_size=7):
+def refine_visibility_map(visibility_map, mask, kernel_size=3):
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
 
     smoothed_background = cv2.morphologyEx(visibility_map, cv2.MORPH_OPEN, kernel)

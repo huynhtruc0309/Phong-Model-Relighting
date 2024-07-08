@@ -3,15 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Image dimensions
-height, width = 200, 300
+height, width = 700, 900
 
 # Create a blue background image
 color_image = np.zeros((height, width, 3), dtype=np.uint8)
 color_image[:, :] = [112, 57, 6]  # Blue background (BGR format)
 
 # Draw a red rectangle in the center
-rect_start = (width // 8, height // 8)
-rect_end = (3 * width // 8, 3 * height // 8)
+rect_start = (width // 6, height // 6)
+rect_end = (3 * width // 6, 3 * height // 6)
 cv2.rectangle(color_image, rect_start, rect_end, (67, 135, 226), -1)  # Red rectangle (BGR format)
 
 # Create a depth map
