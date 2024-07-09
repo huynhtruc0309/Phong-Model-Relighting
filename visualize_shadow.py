@@ -45,8 +45,7 @@ def calculate_visibility_map(depth_map, mask, light_position, tolerance=1):
     height, width = depth_map.shape
     visibility_map = np.ones_like(depth_map)
 
-    shade_positions, stop_line_positions, depth_positions = [], [], []
-    tolerances = []
+    # shade_positions, stop_line_positions, depth_positions, tolerances = [], [], [], []
 
     for y in range(height):
         for x in range(width):
@@ -66,15 +65,15 @@ def calculate_visibility_map(depth_map, mask, light_position, tolerance=1):
                     if abs(depth_map[int(check_position[1]), int(check_position[0])] - check_position_depth) < tolerance \
                         and mask[int(check_position[1]), int(check_position[0])] \
                         and abs(depth_map[int(check_position[1]), int(check_position[0])] - position[2]) > 1e-9: 
-                            shade_positions.append((x, y))
-                            tolerances.append(tolerance)
-                            stop_line_positions.append((check_position[0], check_position[1]))
-                            depth_positions.append(check_position_depth)
+                            # shade_positions.append((x, y))
+                            # tolerances.append(tolerance)
+                            # stop_line_positions.append((check_position[0], check_position[1]))
+                            # depth_positions.append(check_position_depth)
                             visibility_map[y, x] = 0
                             break
             
     print("Visibility map calculated!")
-    return visibility_map, shade_positions, stop_line_positions, depth_positions, tolerances
+    return visibility_map #, shade_positions, stop_line_positions, depth_positions, tolerances
 
 @njit
 def normalize(v):
@@ -116,14 +115,14 @@ def sRGB_to_linear(rgb):
     return linear
 
 @njit
-def relight_image(rgb_image, depth_map, normal_map, light_position, light_color):
+def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_position, light_color):
     print("Relighting the image...")
     height, width, _ = rgb_image.shape
     new_rgb_image = np.zeros_like(rgb_image)
     
     # Phong reflection model parameters
-    ambient_coefficient = 0.2
-    diffuse_coefficient = 0.2
+    ambient_coefficient = 0
+    diffuse_coefficient = 0.9
     specular_coefficient = 0
     shininess = 32
 
@@ -247,21 +246,20 @@ while True:
         light_position[2] = 1000 if light_position[2] > 1000 else light_position[2]
 
         # Convert sRGB to linear RGB
-        new_rgb_image = rgb_image.copy()
-        rgb_image_linear = sRGB_to_linear(new_rgb_image / 255.0)
+        rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
         light_color_linear = sRGB_to_linear(np.array(white_light) / 255.0)
 
         # Convert depth map to float
         depth_map = depth_map.astype(np.float64) 
 
         # Calculate the visibility map
-        visibility_map, shade_positions, stop_line_positions, depth_positions, tolerances = calculate_visibility_map(depth_map, mask, light_position)
+        visibility_map = calculate_visibility_map(depth_map, mask, light_position)
 
         # Refine the visibility map
         visibility_map = refine_visibility_map(visibility_map, mask)
 
         # Relight with white light
-        new_rgb_image = relight_image(rgb_image_linear, depth_map, normal_map, light_position, light_color_linear)
+        new_rgb_image = relight_image(rgb_image_linear, depth_map, normal_map, visibility_map, light_position, light_color_linear)
 
         # draw a circle on the selected position
         cv2.circle(new_rgb_image, (int(light_position[0]), int(light_position[1])), 5, (255, 0, 0), -1)
