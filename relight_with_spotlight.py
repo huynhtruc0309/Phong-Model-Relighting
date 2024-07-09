@@ -129,53 +129,51 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
             # Calculate vector from pixel to light
             light_vector = np.abs(light_position - position)
 
-            # print(light_vector, visibility_map[y, x])
-
             # Calculate depth factor, noting that the light is at maximum 1000
-            # depth_factor = (1 - light_vector[2] / 1000.0) ** 2 if visibility_map[y, x] else 0
+            depth_factor = (1 - light_vector[2] / 1000.0) ** 2 if visibility_map[y, x] else 0
 
-            # # Normalize light vector
-            # light_vector = normalize(light_vector)
+            # Normalize light vector
+            light_vector = normalize(light_vector)
 
-            # # Calculate diffuse component
-            # normal_vector = normal_map[y, x]
-            # normal_vector = normalize(normal_vector)
-            # diffuse_intensity = np.dot(normal_vector, light_vector) * depth_factor
+            # Calculate diffuse component
+            normal_vector = normal_map[y, x]
+            normal_vector = normalize(normal_vector)
+            diffuse_intensity = np.dot(normal_vector, light_vector) * depth_factor
 
-            # # Calculate specular component
-            # view_vector = np.array([0., 0., 1.])
-            # reflect_vector = 2 * normal_vector * np.dot(normal_vector, light_vector) - light_vector
-            # reflect_vector = normalize(reflect_vector)
-            # specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
+            # Calculate specular component
+            view_vector = np.array([0., 0., 1.])
+            reflect_vector = 2 * normal_vector * np.dot(normal_vector, light_vector) - light_vector
+            reflect_vector = normalize(reflect_vector)
+            specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
 
-            # # Combine components
-            # ambient = ambient_coefficient * light_color 
-            # diffuse = diffuse_coefficient * diffuse_intensity * light_color
-            # specular = specular_coefficient * specular_intensity * light_color
+            # Combine components
+            ambient = ambient_coefficient * light_color 
+            diffuse = diffuse_coefficient * diffuse_intensity * light_color
+            specular = specular_coefficient * specular_intensity * light_color
 
-            # color = (ambient + diffuse + specular) 
+            color = (ambient + diffuse + specular) 
 
-            # if (x == light_position[0] and y == light_position[1]):
-            #     print("===At Blue spot===")
-            #     print("Light position: ", light_position)
-            #     print("Pixel position: ", position)
-            #     print("Light vector: ", light_vector)
-            #     print("Normal vector: ", normal_vector)
-            #     print("Dot product ", np.dot(normal_vector, light_vector))
-            #     print("Depth factor: ", depth_factor)
-            #     print("Diffuse intensity: ", diffuse_intensity)
-            #     print("Diffuse: ", diffuse)
-            #     print("Color: ", color)
+            if (x == light_position[0] and y == light_position[1]):
+                print("===At Blue spot===")
+                print("Light position: ", light_position)
+                print("Pixel position: ", position)
+                print("Light vector: ", light_vector)
+                print("Normal vector: ", normal_vector)
+                print("Dot product ", np.dot(normal_vector, light_vector))
+                print("Depth factor: ", depth_factor)
+                print("Diffuse intensity: ", diffuse_intensity)
+                print("Diffuse: ", diffuse)
+                print("Color: ", color)
 
-            # # Apply the lighting to the original color
-            # original_color_linear = rgb_image_linear[y, x]
-            # new_color_linear = original_color_linear + color
+            # Apply the lighting to the original color
+            original_color_linear = rgb_image_linear[y, x]
+            new_color_linear = original_color_linear + color
 
-            # # Convert back to sRGB for display purposes (if needed)
-            # new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
+            # Convert back to sRGB for display purposes (if needed)
+            new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
 
-            # # Update the image with relighted colors
-            # new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
+            # Update the image with relighted colors
+            new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
 
     print("Image relighted!")
     return new_rgb_image.astype(np.uint8)
@@ -236,7 +234,7 @@ while True:
         visibility_map = calculate_visibility_map(depth_map, mask, light_start, light_direction, spread_angle_deg)
         visibility_map = refine_visibility_map(visibility_map, mask)
 
-        new_rgb_image = relight_image(rgb_image_linear, depth_map, normal_map, light_start, light_color_linear, visibility_map)
+        new_rgb_image = relight_image(rgb_image, depth_map, normal_map, visibility_map, light_start, light_color_linear)
         cv2.line(new_rgb_image, selected_positions[0], selected_positions[1], (255, 0, 0), 2)
 
         cv2.imshow('Image', new_rgb_image)
