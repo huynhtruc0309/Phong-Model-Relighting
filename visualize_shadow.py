@@ -153,7 +153,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
 
             # Combine components
             ambient = ambient_coefficient * light_color 
-            diffuse = diffuse_coefficient * diffuse_intensity * light_color
+            diffuse = light_color # diffuse_coefficient * diffuse_intensity * light_color
             specular = specular_coefficient * specular_intensity * light_color
 
             color = (ambient + diffuse + specular) 
@@ -185,16 +185,15 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
 
 
 # Paths to your images
-sample = 5
+sample = 8
 rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
-depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map_1.png'
+depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
 normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
 mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 # Load images
 rgb_image = load_image(rgb_image_path)
 depth_map = load_depth_map(depth_map_path)
-cv2.imshow('Depth map', depth_map)
 normal_map = load_normal_map(normal_map_path)
 mask = load_mask(mask_path)
 
@@ -213,7 +212,7 @@ white_light = [255, 255, 255]  # Example light color (white)
 # the oder of the color is BGR
 red_light = [0, 0, 255]  
 green_light = [0, 255, 0] 
-blue_light = [255, 0, 0] 
+blue_light = [232, 163, 0] 
 
 # Initialize a global variable to store the selected position
 selected_position = None
@@ -247,7 +246,7 @@ while True:
 
         # Convert sRGB to linear RGB
         rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
-        light_color_linear = sRGB_to_linear(np.array(white_light) / 255.0)
+        light_color_linear = sRGB_to_linear(np.array(blue_light) / 255.0)
 
         # Convert depth map to float
         depth_map = depth_map.astype(np.float64) 
@@ -265,6 +264,7 @@ while True:
         cv2.circle(new_rgb_image, (int(light_position[0]), int(light_position[1])), 5, (255, 0, 0), -1)
 
         cv2.imshow('Image', new_rgb_image)
+        cv2.imshow('Original Image', rgb_image)
         cv2.imshow('Shadow map', visibility_map * 255)
 
         # stop_flag = True

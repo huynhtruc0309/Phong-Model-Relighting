@@ -9,11 +9,11 @@ def load_image(file_path):
         return None
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
-def load_depth_map(file_path):
+def load_depth_map(file_path, kernel_size=7):
     if not os.path.isfile(file_path):
         print(f"Depth map '{file_path}' does not exist.")
         return None
-    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+    return cv2.blur(cv2.imread(file_path, cv2.IMREAD_GRAYSCALE), (kernel_size, kernel_size))
 
 def load_normal_map(file_path):
     if not os.path.isfile(file_path):
@@ -50,25 +50,27 @@ def calculate_visibility_map(depth_map, mask, light_start, light_direction, spre
     for y in range(height):
         for x in range(width):
             position = np.array([x, y, depth_map[y, x]])
-            # light_vector = light_start - position
-            # light_vector = normalize(light_vector)
-            # angle = np.arccos(np.dot(light_direction, light_vector))
+            light_vector = light_start - position
+            light_vector = normalize(light_vector)
+            angle = np.arccos(np.dot(light_direction, light_vector))
 
-            # if angle <= spread_angle_rad:
-            check_positions = draw_straight_line(light_start, position)
+            if angle > spread_angle_rad:
+                visibility_map[y, x] = 0
+            else:
+                check_positions = draw_straight_line(light_start, position)
 
-            if len(check_positions):
-                depth_step = (light_start[2] - position[2]) / len(check_positions)
-                check_position_depth = light_start[2]
+                if len(check_positions):
+                    depth_step = (light_start[2] - position[2]) / len(check_positions)
+                    check_position_depth = light_start[2]
 
-                for check_position in check_positions:
-                    check_position_depth -= depth_step
+                    for check_position in check_positions:
+                        check_position_depth -= depth_step
 
-                    if abs(depth_map[int(check_position[1]), int(check_position[0])] - check_position_depth) < tolerance \
-                        and mask[int(check_position[1]), int(check_position[0])] \
-                        and abs(depth_map[int(check_position[1]), int(check_position[0])] - position[2]) > 1e-9: 
-                            visibility_map[y, x] = 0
-                            break
+                        if abs(depth_map[int(check_position[1]), int(check_position[0])] - check_position_depth) < tolerance \
+                            and mask[int(check_position[1]), int(check_position[0])] \
+                            and abs(depth_map[int(check_position[1]), int(check_position[0])] - position[2]) > 1e-9: 
+                                visibility_map[y, x] = 0
+                                break
             
     return visibility_map
 
@@ -117,10 +119,10 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
     
     # Phong reflection model parameters
     ambient_coefficient = 0
-    diffuse_coefficient = 0.9
+    diffuse_coefficient = 1
     specular_coefficient = 0
     shininess = 32
-    print(visibility_map.shape)
+
     for y in range(height):
         for x in range(width):
             # Calculate position of the current pixel in 3D space
@@ -138,7 +140,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
             # Calculate diffuse component
             normal_vector = normal_map[y, x]
             normal_vector = normalize(normal_vector)
-            diffuse_intensity = np.dot(normal_vector, light_vector) * depth_factor
+            diffuse_intensity = max(np.dot(normal_vector, light_vector), 0) * depth_factor
 
             # Calculate specular component
             view_vector = np.array([0., 0., 1.])
@@ -178,9 +180,9 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
     print("Image relighted!")
     return new_rgb_image.astype(np.uint8)
 
-sample = 5
+sample = 8
 rgb_image_path = f'sample_{sample}/inputs/rgb_image.png'
-depth_map_path = f'sample_{sample}/inputs/depth_map_1.png'
+depth_map_path = f'sample_{sample}/inputs/depth_map.png'
 normal_map_path = f'sample_{sample}/inputs/normal_map.png'
 mask_path = f'sample_{sample}/inputs/mask.png'
 
@@ -198,8 +200,8 @@ depth_map = cv2.resize(depth_map, dim, interpolation=cv2.INTER_AREA)
 normal_map = cv2.resize(normal_map, dim, interpolation=cv2.INTER_AREA)
 mask = cv2.resize(mask, dim, interpolation=cv2.INTER_AREA)
 
-white_light = [255, 255, 255]
-spread_angle_deg = 30
+white_light = [232, 163, 0]
+spread_angle_deg = 360
 light_z = 300
 
 selected_positions = []
@@ -237,6 +239,7 @@ while True:
         new_rgb_image = relight_image(rgb_image, depth_map, normal_map, visibility_map, light_start, light_color_linear)
         cv2.line(new_rgb_image, selected_positions[0], selected_positions[1], (255, 0, 0), 2)
 
+        cv2.imshow('Original Image', rgb_image)
         cv2.imshow('Image', new_rgb_image)
         cv2.imshow('Shadow map', visibility_map * 255)
 
