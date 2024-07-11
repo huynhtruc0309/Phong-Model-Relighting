@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-sample = 7
+sample = 9
 
 # Load the depth map
 depth = np.load('sample_' + str(sample) + '/inputs/depth.npy')

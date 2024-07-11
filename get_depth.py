@@ -14,10 +14,10 @@ def load_mask(file_path):
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 # Paths to your images
-sample = 6
-rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
+sample = 9
+rgb_image_path = 'sample_' + str(sample) + '/inputs/image(6).png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
-normal_map_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
+normal_map_path = 'sample_' + str(sample) + '/inputs/image(6).png'
 mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 # Load images
@@ -27,7 +27,7 @@ normal_map = load_normal_map(normal_map_path)
 mask = load_mask(mask_path)
 
 # resize the images keep the aspect ratio
-scale_percent = 100
+scale_percent = 20
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)

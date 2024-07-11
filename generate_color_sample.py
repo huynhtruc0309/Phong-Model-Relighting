@@ -3,10 +3,9 @@ import numpy as np
 
 # Define the colors in RGBA format
 colors = [
-    (255, 255, 255),  # White
-    (163, 73, 163),  # Purple
-    (35, 177, 77),   # Green
-    (255, 127, 38)   # Orange
+    (39, 127, 255),   # Orange
+    (164, 73, 163),  # Purple
+    (76, 177, 34)   # Green
 ]
 
 # Image dimensions and grid size

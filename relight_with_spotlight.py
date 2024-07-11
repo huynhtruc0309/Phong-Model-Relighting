@@ -118,9 +118,9 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
     new_rgb_image = np.zeros_like(rgb_image)
     
     # Phong reflection model parameters
-    ambient_coefficient = 0
-    diffuse_coefficient = 1
-    specular_coefficient = 0
+    ambient_coefficient = 0.2
+    diffuse_coefficient = 0.6
+    specular_coefficient = 0.2
     shininess = 32
 
     for y in range(height):
@@ -169,7 +169,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
 
             # Apply the lighting to the original color
             original_color_linear = rgb_image_linear[y, x]
-            new_color_linear = original_color_linear + color
+            new_color_linear = (original_color_linear + color) / 2
 
             # Convert back to sRGB for display purposes (if needed)
             new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
@@ -180,7 +180,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
     print("Image relighted!")
     return new_rgb_image.astype(np.uint8)
 
-sample = 8
+sample = 7
 rgb_image_path = f'sample_{sample}/inputs/rgb_image.png'
 depth_map_path = f'sample_{sample}/inputs/depth_map.png'
 normal_map_path = f'sample_{sample}/inputs/normal_map.png'
@@ -191,7 +191,7 @@ depth_map = load_depth_map(depth_map_path)
 normal_map = load_normal_map(normal_map_path)
 mask = load_mask(mask_path)
 
-scale_percent = 100
+scale_percent = 20
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)
@@ -200,8 +200,8 @@ depth_map = cv2.resize(depth_map, dim, interpolation=cv2.INTER_AREA)
 normal_map = cv2.resize(normal_map, dim, interpolation=cv2.INTER_AREA)
 mask = cv2.resize(mask, dim, interpolation=cv2.INTER_AREA)
 
-white_light = [232, 163, 0]
-spread_angle_deg = 360
+red_light = [36, 28, 237]
+spread_angle_deg = 180
 light_z = 300
 
 selected_positions = []
@@ -223,13 +223,13 @@ while True:
         break
 
     if len(selected_positions) == 2:
-        light_start = np.array([selected_positions[0][0], selected_positions[0][1], light_z]).astype(np.float64)
+        light_start = np.array([selected_positions[0][0], selected_positions[0][1], depth_map[selected_positions[0][1], selected_positions[0][0]] + 20]).astype(np.float64)
         light_start[2] = 1000. if light_start[2] > 1000 else light_start[2]
         light_end = np.array([selected_positions[1][0], selected_positions[1][1], depth_map[selected_positions[1][1], selected_positions[1][0]]]).astype(np.float64)
         light_direction = light_start - light_end
         
         rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
-        light_color_linear = sRGB_to_linear(np.array(white_light) / 255.0)
+        light_color_linear = sRGB_to_linear(np.array(red_light) / 255.0)
 
         depth_map = depth_map.astype(np.float64) 
 

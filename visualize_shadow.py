@@ -153,7 +153,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
 
             # Combine components
             ambient = ambient_coefficient * light_color 
-            diffuse = light_color # diffuse_coefficient * diffuse_intensity * light_color
+            diffuse = diffuse_coefficient * diffuse_intensity * light_color
             specular = specular_coefficient * specular_intensity * light_color
 
             color = (ambient + diffuse + specular) 
@@ -172,7 +172,7 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
 
             # Apply the lighting to the original color
             original_color_linear = rgb_image_linear[y, x]
-            new_color_linear = original_color_linear + color
+            new_color_linear = (original_color_linear + color) / 2
 
             # Convert back to sRGB for display purposes (if needed)
             new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
@@ -210,8 +210,8 @@ mask = cv2.resize(mask, dim, interpolation = cv2.INTER_AREA)
 # Define new lighting parameters
 white_light = [255, 255, 255]  # Example light color (white)
 # the oder of the color is BGR
-red_light = [0, 0, 255]  
-green_light = [0, 255, 0] 
+red_light = [36, 28, 237]  
+yellow_light = [0, 242, 255] 
 blue_light = [232, 163, 0] 
 
 # Initialize a global variable to store the selected position
@@ -246,7 +246,7 @@ while True:
 
         # Convert sRGB to linear RGB
         rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
-        light_color_linear = sRGB_to_linear(np.array(blue_light) / 255.0)
+        light_color_linear = sRGB_to_linear(np.array(red_light) / 255.0)
 
         # Convert depth map to float
         depth_map = depth_map.astype(np.float64) 
