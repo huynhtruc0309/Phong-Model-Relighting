@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-sample = 9
+sample = 10
 
 # Load the depth map
 depth = np.load('sample_' + str(sample) + '/inputs/depth.npy')
@@ -18,16 +18,3 @@ scaled_depth = (inverted_depth * 255).astype(np.uint8)
 
 # Assuming scaled_depth is your processed depth map from the previous steps
 cv2.imwrite('sample_' + str(sample) + '/inputs/depth_map.png', scaled_depth)
-
-
-# Load the normal map
-normal_new = np.load('sample_' + str(sample) + '/inputs/normal.npy')
-
-# Normalize to [0, 1]
-normalized_normal = (normal_new - normal_new.min()) / (normal_new.max() - normal_new.min())
-
-# Scale to [0, 255]
-scaled_normal = (normalized_normal * 255).astype(np.uint8)
-
-# Save the scaled normal map as an image
-cv2.imwrite('sample_' + str(sample) + '/inputs/normal_map.png', scaled_normal)

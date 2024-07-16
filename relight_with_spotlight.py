@@ -9,17 +9,17 @@ def load_image(file_path):
         return None
     return cv2.imread(file_path, cv2.IMREAD_COLOR)
 
-def load_depth_map(file_path, kernel_size=7):
+def load_depth_map(file_path):
     if not os.path.isfile(file_path):
         print(f"Depth map '{file_path}' does not exist.")
         return None
-    return cv2.blur(cv2.imread(file_path, cv2.IMREAD_GRAYSCALE), (kernel_size, kernel_size))
+    return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 def load_normal_map(file_path):
     if not os.path.isfile(file_path):
         print(f"Normal map '{file_path}' does not exist.")
         return None
-    return cv2.imread(file_path, cv2.IMREAD_COLOR)
+    return np.load(file_path)
 
 def load_mask(file_path):
     if not os.path.isfile(file_path):
@@ -41,6 +41,7 @@ def refine_visibility_map(visibility_map, mask, kernel_size=7):
 
 @njit
 def calculate_visibility_map(depth_map, mask, light_start, light_direction, spread_angle_deg, tolerance=1):
+    print("Calculating visibility map...")
     height, width = depth_map.shape
     visibility_map = np.ones_like(depth_map)
 
@@ -71,7 +72,7 @@ def calculate_visibility_map(depth_map, mask, light_start, light_direction, spre
                             and abs(depth_map[int(check_position[1]), int(check_position[0])] - position[2]) > 1e-9: 
                                 visibility_map[y, x] = 0
                                 break
-            
+    print("Visibility map calculated!")
     return visibility_map
 
 @njit
@@ -117,38 +118,27 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
     height, width, _ = rgb_image.shape
     new_rgb_image = np.zeros_like(rgb_image)
     
-    # Phong reflection model parameters
-    ambient_coefficient = 0.2
-    diffuse_coefficient = 0.6
-    specular_coefficient = 0.2
+    ambient_coefficient = 0
+    diffuse_coefficient = 0.9
+    specular_coefficient = 0
     shininess = 32
 
     for y in range(height):
         for x in range(width):
-            # Calculate position of the current pixel in 3D space
             position = np.array([x, y, depth_map[y, x]])
-
-            # Calculate vector from pixel to light
-            light_vector = np.abs(light_position - position)
-
-            # Calculate depth factor, noting that the light is at maximum 1000
-            depth_factor = (1 - light_vector[2] / 1000.0) ** 2 if visibility_map[y, x] else 0
-
-            # Normalize light vector
+            light_vector = position - light_position
             light_vector = normalize(light_vector)
+            depth_factor = (1 - abs(light_vector[2]) / 1000.0) ** 2 if visibility_map[y, x] else 0
 
-            # Calculate diffuse component
             normal_vector = normal_map[y, x]
             normal_vector = normalize(normal_vector)
             diffuse_intensity = max(np.dot(normal_vector, light_vector), 0) * depth_factor
 
-            # Calculate specular component
-            view_vector = np.array([0., 0., 1.])
+            view_vector = np.array([0., 0., -1.])
             reflect_vector = 2 * normal_vector * np.dot(normal_vector, light_vector) - light_vector
             reflect_vector = normalize(reflect_vector)
             specular_intensity = max(np.dot(view_vector, reflect_vector), 0) ** shininess  * depth_factor
 
-            # Combine components
             ambient = ambient_coefficient * light_color 
             diffuse = diffuse_coefficient * diffuse_intensity * light_color
             specular = specular_coefficient * specular_intensity * light_color
@@ -167,31 +157,27 @@ def relight_image(rgb_image, depth_map, normal_map, visibility_map, light_positi
                 print("Diffuse: ", diffuse)
                 print("Color: ", color)
 
-            # Apply the lighting to the original color
             original_color_linear = rgb_image_linear[y, x]
             new_color_linear = (original_color_linear + color) / 2
 
-            # Convert back to sRGB for display purposes (if needed)
-            new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2)  # Gamma correction for display
-
-            # Update the image with relighted colors
+            new_color_sRGB = np.clip(new_color_linear, 0, 1) ** (1 / 2.2) 
             new_rgb_image[y, x] = np.clip(new_color_sRGB * 255, 0, 255)
 
     print("Image relighted!")
     return new_rgb_image.astype(np.uint8)
 
-sample = 7
-rgb_image_path = f'sample_{sample}/inputs/rgb_image.png'
-depth_map_path = f'sample_{sample}/inputs/depth_map.png'
-normal_map_path = f'sample_{sample}/inputs/normal_map.png'
-mask_path = f'sample_{sample}/inputs/mask.png'
+sample = 10
+rgb_image_path = 'sample_' + str(sample) + '/inputs/rgb_image.png'
+depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
+normal_map_path = 'sample_' + str(sample) + '/inputs/normal.npy'
+mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 rgb_image = load_image(rgb_image_path)
 depth_map = load_depth_map(depth_map_path)
 normal_map = load_normal_map(normal_map_path)
 mask = load_mask(mask_path)
 
-scale_percent = 20
+scale_percent = 100
 width = int(rgb_image.shape[1] * scale_percent / 100)
 height = int(rgb_image.shape[0] * scale_percent / 100)
 dim = (width, height)
@@ -200,13 +186,12 @@ depth_map = cv2.resize(depth_map, dim, interpolation=cv2.INTER_AREA)
 normal_map = cv2.resize(normal_map, dim, interpolation=cv2.INTER_AREA)
 mask = cv2.resize(mask, dim, interpolation=cv2.INTER_AREA)
 
-red_light = [36, 28, 237]
-spread_angle_deg = 180
-light_z = 300
+white_light = [255, 255, 255]
+spread_angle_deg = 30
 
 selected_positions = []
 
-def mouse_callback(event, x, y, flags, param):
+def mouse_callback(event, x, y):
     global selected_positions
     if event == cv2.EVENT_LBUTTONDOWN:
         selected_positions.append((x, y))
@@ -229,7 +214,7 @@ while True:
         light_direction = light_start - light_end
         
         rgb_image_linear = sRGB_to_linear(rgb_image / 255.0)
-        light_color_linear = sRGB_to_linear(np.array(red_light) / 255.0)
+        light_color_linear = sRGB_to_linear(np.array(white_light) / 255.0)
 
         depth_map = depth_map.astype(np.float64) 
 

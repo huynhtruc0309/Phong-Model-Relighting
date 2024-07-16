@@ -8,16 +8,16 @@ def load_depth_map(file_path):
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 def load_normal_map(file_path):
-    return cv2.imread(file_path, cv2.IMREAD_COLOR)
+    return np.load(file_path)
 
 def load_mask(file_path):
     return cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
 
 # Paths to your images
-sample = 9
-rgb_image_path = 'sample_' + str(sample) + '/inputs/image(6).png'
+sample = 10
+rgb_image_path = 'sample_' + str(sample) + '/inputs/normal_map.png'
 depth_map_path = 'sample_' + str(sample) + '/inputs/depth_map.png'
-normal_map_path = 'sample_' + str(sample) + '/inputs/image(6).png'
+normal_map_path = 'sample_' + str(sample) + '/inputs/normal.npy'
 mask_path = 'sample_' + str(sample) + '/inputs/mask.png'
 
 # Load images
@@ -27,13 +27,13 @@ normal_map = load_normal_map(normal_map_path)
 mask = load_mask(mask_path)
 
 # resize the images keep the aspect ratio
-scale_percent = 20
-width = int(rgb_image.shape[1] * scale_percent / 100)
-height = int(rgb_image.shape[0] * scale_percent / 100)
-dim = (width, height)
-rgb_image = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
-depth_map = cv2.resize(depth_map, dim, interpolation = cv2.INTER_AREA)
-normal_map = cv2.resize(normal_map, dim, interpolation = cv2.INTER_AREA)
+# scale_percent = 20
+# width = int(rgb_image.shape[1] * scale_percent / 100)
+# height = int(rgb_image.shape[0] * scale_percent / 100)
+# dim = (width, height)
+# rgb_image = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
+# depth_map = cv2.resize(depth_map, dim, interpolation = cv2.INTER_AREA)
+# normal_map = cv2.resize(normal_map, dim, interpolation = cv2.INTER_AREA)
 
 # Check if images are loaded correctly
 if rgb_image is None or depth_map is None or normal_map is None:
